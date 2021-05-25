@@ -5,7 +5,6 @@ use crate::models::channels::Variable;
 use crate::models::events::*;
 use crate::models::playbacks::Playback;
 use async_trait::async_trait;
-use base64;
 use futures_util::SinkExt;
 use http::StatusCode;
 use lazy_static::lazy_static;
@@ -15,7 +14,6 @@ use reqwest::{
     self,
     header::{HeaderMap, HeaderValue},
 };
-use serde_json;
 use std::boxed::Box;
 use tokio::time::{interval, Duration};
 use tokio_tungstenite::{connect_async, tungstenite::Message as WSMessage};
@@ -61,8 +59,6 @@ impl AriClient {
     }
 
     /// connect to ARI signal stream websocket
-    /// to mock the connection this can be used from asterisks erver:
-    /// wscat -c"ws://localhost:8088/ari/events?api_key=<<asterisk user>>>:<<asterisk password>>>&app=<<asterisk app>>"
     pub async fn ari_processing_loop(
         &self,
         asterisk_apps: Vec<String>,
