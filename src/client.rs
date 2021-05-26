@@ -15,6 +15,7 @@ use reqwest::{
     header::{HeaderMap, HeaderValue},
 };
 use std::boxed::Box;
+use tokio::sync::mpsc::Sender;
 use tokio::time::{interval, Duration};
 use tokio_tungstenite::{connect_async, tungstenite::Message as WSMessage};
 use url::Url;
@@ -33,20 +34,17 @@ pub struct AriClient {
     pub url: String,
     pub user: String,
     pub password: String,
-}
-
-pub trait AriClientEventHandlers {
-    fn stasis_start(&self, event: StasisStart);
-    fn channel_dtmf_received(&self, event: ChannelDtmfReceived);
-    fn channel_hangup_request(&self, event: ChannelHangupRequest);
-    fn stasis_end(&self, event: StasisEnd);
-    fn channel_talking_finished(&self, event: ChannelTalkingFinished);
-    fn channel_talking_started(&self, event: ChannelTalkingStarted);
-    fn channel_destroyed(&self, event: ChannelDestroyed);
-    fn playback_started(&self, event: PlaybackStarted);
-    fn playback_finished(&self, event: PlaybackFinished);
-    fn channel_state_change(&self, event: ChannelStateChange);
-    fn channel_var_set(&self, event: ChannelVarset);
+    stasis_start_sender: Option<Sender<StasisStart>>,
+    channel_dtmf_received_sender: Option<Sender<ChannelDtmfReceived>>,
+    channel_hangup_request_sender: Option<Sender<ChannelHangupRequest>>,
+    stasis_end_sender: Option<Sender<StasisEnd>>,
+    channel_talking_finished_sender: Option<Sender<ChannelTalkingFinished>>,
+    channel_talking_started_sender: Option<Sender<ChannelTalkingStarted>>,
+    channel_destroyed_sender: Option<Sender<ChannelDestroyed>>,
+    playback_started_sender: Option<Sender<PlaybackStarted>>,
+    playback_finished_sender: Option<Sender<PlaybackFinished>>,
+    channel_state_change_sender: Option<Sender<ChannelStateChange>>,
+    channel_var_set_sender: Option<Sender<ChannelVarset>>,
 }
 
 impl AriClient {
@@ -55,15 +53,78 @@ impl AriClient {
             url,
             user,
             password,
+            stasis_start_sender: None,
+            channel_dtmf_received_sender: None,
+            channel_hangup_request_sender: None,
+            stasis_end_sender: None,
+            channel_talking_finished_sender: None,
+            channel_talking_started_sender: None,
+            channel_destroyed_sender: None,
+            playback_started_sender: None,
+            playback_finished_sender: None,
+            channel_state_change_sender: None,
+            channel_var_set_sender: None,
         }
     }
 
+    pub fn set_stasis_start_sender(&mut self, sender: Option<Sender<StasisStart>>) {
+        self.stasis_start_sender = sender;
+    }
+
+    pub fn set_channel_dtmf_received_sender(
+        &mut self,
+        sender: Option<Sender<ChannelDtmfReceived>>,
+    ) {
+        self.channel_dtmf_received_sender = sender;
+    }
+
+    pub fn set_channel_hangup_request_sender(
+        &mut self,
+        sender: Option<Sender<ChannelHangupRequest>>,
+    ) {
+        self.channel_hangup_request_sender = sender;
+    }
+
+    pub fn set_stasis_end_sender(&mut self, sender: Option<Sender<StasisEnd>>) {
+        self.stasis_end_sender = sender;
+    }
+
+    pub fn set_channel_talking_finished_sender(
+        &mut self,
+        sender: Option<Sender<ChannelTalkingFinished>>,
+    ) {
+        self.channel_talking_finished_sender = sender;
+    }
+
+    pub fn set_channel_talking_started_sender(
+        &mut self,
+        sender: Option<Sender<ChannelTalkingStarted>>,
+    ) {
+        self.channel_talking_started_sender = sender;
+    }
+
+    pub fn set_channel_destroyed_sender(&mut self, sender: Option<Sender<ChannelDestroyed>>) {
+        self.channel_destroyed_sender = sender;
+    }
+
+    pub fn set_playback_started_sender(&mut self, sender: Option<Sender<PlaybackStarted>>) {
+        self.playback_started_sender = sender;
+    }
+
+    pub fn set_playback_finished_sender(&mut self, sender: Option<Sender<PlaybackFinished>>) {
+        self.playback_finished_sender = sender;
+    }
+
+    pub fn set_channel_state_change_sender(&mut self, sender: Option<Sender<ChannelStateChange>>) {
+        self.channel_state_change_sender = sender;
+    }
+
+    pub fn set_channel_var_set_sender(&mut self, sender: Option<Sender<ChannelVarset>>) {
+        self.channel_var_set_sender = sender;
+    }
+
     /// connect to ARI signal stream websocket
-    pub async fn ari_processing_loop(
-        &self,
-        asterisk_apps: Vec<String>,
-        handlers: Option<Box<dyn AriClientEventHandlers + Send + Sync>>,
-    ) -> Result<()> {
+    pub async fn ari_processing_loop(&self, asterisk_apps: Vec<String>) -> Result<()> {
         let ws_protocol = if self.url.starts_with("https://") {
             "wss"
         } else {
@@ -116,97 +177,137 @@ impl AriClient {
 
         let mut interval = interval(Duration::from_millis(5000));
 
-        if let Some(hndl) = handlers
-        /* start processing messages only if there are handlers defined!*/
-        {
-            loop {
-                tokio::select! {
-                    msg = ws_receiver.next() => {
-                        match msg {
-                            Some(msg) => {
-                                let msg = msg?;
-                                match msg {
-                                        WSMessage::Close(close_frame) => {
-                                            info!(
-                                                "close message received, leaving the loop! {:#?}",
-                                                close_frame
+        loop {
+            tokio::select! {
+                msg = ws_receiver.next() => {
+                    match msg {
+                        Some(msg) => {
+                            let msg = msg?;
+                            match msg {
+                                    WSMessage::Close(close_frame) => {
+                                        info!(
+                                            "close message received, leaving the loop! {:#?}",
+                                            close_frame
+                                        );
+                                        break;
+                                    }
+                                    WSMessage::Pong(_) => {}
+                                    WSMessage::Ping(data) => {
+                                        let _ = ws_sender.send(WSMessage::Pong(data)).await;
+                                    }
+                                    WSMessage::Text(string_msg) => {
+                                        debug!(
+                                            "asterisk signal event received: {:#?}",
+                                            string_msg
+                                        );
+                                        let ari_event =
+                                            serde_json::from_str::<AriEvent>(&string_msg);
+                                        if let Err(deser_err) = ari_event {
+                                            warn!(
+                                                "error when deserializing ARI event: {:#?}. Event: {:#?}",
+                                                deser_err, string_msg
                                             );
-                                            break;
-                                        }
-                                        WSMessage::Pong(_) => {}
-                                        WSMessage::Ping(data) => {
-                                            let _ = ws_sender.send(WSMessage::Pong(data)).await;
-                                        }
-                                        WSMessage::Text(string_msg) => {
-                                            debug!(
-                                                "asterisk signal event received: {:#?}",
-                                                string_msg
-                                            );
-                                            let ari_event =
-                                                serde_json::from_str::<AriEvent>(&string_msg);
-                                            if let Err(deser_err) = ari_event {
-                                                warn!(
-                                                    "error when deserializing ARI event: {:#?}. Event: {:#?}",
-                                                    deser_err, string_msg
-                                                );
-                                            } else {
-                                                let ari_event = ari_event.unwrap();
-                                                trace!("ari_event: {:#?}", ari_event);
-                                                match ari_event {
-                                                    AriEvent::StasisStart(event) => {
-                                                        hndl.stasis_start(event.clone())
+                                        } else {
+                                            let ari_event = ari_event.unwrap();
+                                            trace!("ari_event: {:#?}", ari_event);
+                                            match ari_event {
+                                                AriEvent::StasisStart(event) => {
+                                                    if let Some(sender) = &self.stasis_start_sender {
+                                                        if let Err(send_err) = sender.send(event.clone()).await {
+                                                            error!("ari_processing_loop StasisStart sending error {:?}: ", send_err);
+                                                        }
                                                     }
-                                                    AriEvent::ChannelDtmfReceived(event) => {
-                                                        hndl.channel_dtmf_received(event.clone())
+                                                }
+                                                AriEvent::ChannelDtmfReceived(event) => {
+                                                    if let Some(sender) = &self.channel_dtmf_received_sender {
+                                                        if let Err(send_err) = sender.send(event.clone()).await {
+                                                            error!("ari_processing_loop ChannelDtmfReceived sending error {:?}: ", send_err);
+                                                        }
                                                     }
-                                                    AriEvent::ChannelHangupRequest(event) => {
-                                                        hndl.channel_hangup_request(event.clone())
+                                                }
+                                                AriEvent::ChannelHangupRequest(event) => {
+                                                    if let Some(sender) = &self.channel_hangup_request_sender {
+                                                        if let Err(send_err) = sender.send(event.clone()).await {
+                                                            error!("ari_processing_loop ChannelHangupRequest sending error {:?}: ", send_err);
+                                                        }
                                                     }
-                                                    AriEvent::StasisEnd(event) => {
-                                                        hndl.stasis_end(event.clone())
+                                                }
+                                                AriEvent::StasisEnd(event) => {
+                                                    if let Some(sender) = &self.stasis_end_sender {
+                                                        if let Err(send_err) = sender.send(event.clone()).await {
+                                                            error!("ari_processing_loop StasisEnd sending error {:?}: ", send_err);
+                                                        }
                                                     }
-                                                    AriEvent::ChannelTalkingFinished(event) => {
-                                                        hndl.channel_talking_finished(event.clone())
+                                                }
+                                                AriEvent::ChannelTalkingFinished(event) => {
+                                                    if let Some(sender) = &self.channel_talking_finished_sender {
+                                                        if let Err(send_err) = sender.send(event.clone()).await {
+                                                            error!("ari_processing_loop ChannelTalkingFinished sending error {:?}: ", send_err);
+                                                        }
                                                     }
-                                                    AriEvent::ChannelTalkingStarted(event) => {
-                                                        hndl.channel_talking_started(event.clone())
+                                                }
+                                                AriEvent::ChannelTalkingStarted(event) => {
+                                                    if let Some(sender) = &self.channel_talking_started_sender {
+                                                        if let Err(send_err) = sender.send(event.clone()).await {
+                                                            error!("ari_processing_loop ChannelTalkingStarted sending error {:?}: ", send_err);
+                                                        }
                                                     }
-                                                    AriEvent::ChannelDestroyed(event) => {
-                                                        hndl.channel_destroyed(event.clone())
+                                                }
+                                                AriEvent::ChannelDestroyed(event) => {
+                                                    if let Some(sender) = &self.channel_destroyed_sender {
+                                                        if let Err(send_err) = sender.send(event.clone()).await {
+                                                            error!("ari_processing_loop ChannelDestroyed sending error {:?}: ", send_err);
+                                                        }
                                                     }
-                                                    AriEvent::PlaybackStarted(event) => {
-                                                        hndl.playback_started(event.clone())
+                                                }
+                                                AriEvent::PlaybackStarted(event) => {
+                                                    if let Some(sender) = &self.playback_started_sender {
+                                                        if let Err(send_err) = sender.send(event.clone()).await {
+                                                            error!("ari_processing_loop PlaybackStarted sending error {:?}: ", send_err);
+                                                        }
                                                     }
-                                                    AriEvent::PlaybackFinished(event) => {
-                                                        hndl.playback_finished(event.clone())
+                                                }
+                                                AriEvent::PlaybackFinished(event) => {
+                                                    if let Some(sender) = &self.playback_finished_sender {
+                                                        if let Err(send_err) = sender.send(event.clone()).await {
+                                                            error!("ari_processing_loop PlaybackFinished sending error {:?}: ", send_err);
+                                                        }
                                                     }
-                                                    AriEvent::ChannelStateChange(event) => {
-                                                        hndl.channel_state_change(event.clone())
+                                                }
+                                                AriEvent::ChannelStateChange(event) => {
+                                                    if let Some(sender) = &self.channel_state_change_sender {
+                                                        if let Err(send_err) = sender.send(event.clone()).await {
+                                                            error!("ari_processing_loop ChannelStateChange sending error {:?}: ", send_err);
+                                                        }
                                                     }
-                                                    AriEvent::ChannelVarset(event) => {
-                                                        hndl.channel_var_set(event.clone())
+                                                }
+                                                AriEvent::ChannelVarset(event) => {
+                                                    if let Some(sender) = &self.channel_var_set_sender {
+                                                        if let Err(send_err) = sender.send(event.clone()).await {
+                                                            error!("ari_processing_loop ChannelVarset sending error {:?}: ", send_err);
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
-                                        _ => {
-                                            warn!(
-                                                "unknown websocket message received: {:#?}",
-                                                msg
-                                            );
-                                        }
                                     }
-                            }
-                            None => break,
+                                    _ => {
+                                        warn!(
+                                            "unknown websocket message received: {:#?}",
+                                            msg
+                                        );
+                                    }
+                                }
                         }
+                        None => break,
                     }
-                    _ = interval.tick() => {
-                        // every 5 seconds we are sending ping to keep connection alive
-                        // https://rust-lang-nursery.github.io/rust-cookbook/algorithms/randomness.html
-                        let random_bytes = rand::thread_rng().gen::<[u8; 32]>().to_vec();
-                        let _ = ws_sender.send(WSMessage::Ping(random_bytes)).await;
-                        debug!("ari connection ping sent");
-                    }
+                }
+                _ = interval.tick() => {
+                    // every 5 seconds we are sending ping to keep connection alive
+                    // https://rust-lang-nursery.github.io/rust-cookbook/algorithms/randomness.html
+                    let random_bytes = rand::thread_rng().gen::<[u8; 32]>().to_vec();
+                    let _ = ws_sender.send(WSMessage::Ping(random_bytes)).await;
+                    debug!("ari connection ping sent");
                 }
             }
         }
