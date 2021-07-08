@@ -24,4 +24,7 @@ pub trait ChannelsAPI {
 
     /// Hangs up the channel
     async fn hangup(&self, channel_id: &str) -> Result<()>;
+
+    /// Exit application; continue execution in the dialplan
+    async fn continue_in_dialplan(&self, channel_id: &str) -> Result<()>;
 }

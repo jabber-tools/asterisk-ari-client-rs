@@ -494,4 +494,17 @@ impl ChannelsAPI for AriClient {
         eval_status_code!(status, StatusCode::NO_CONTENT, Some(body_str));
         Ok(())
     }
+
+    async fn continue_in_dialplan(&self, channel_id: &str) -> Result<()> {
+        let resp = HTTP_CLIENT
+            .post(format!("{}/channels/{}/continue", self.url, channel_id))
+            .headers(self.get_common_headers()?)
+            .send()
+            .await?;
+
+        let status = resp.status();
+        let body_str = resp.text().await?;
+        eval_status_code!(status, StatusCode::NO_CONTENT, Some(body_str));
+        Ok(())
+    }
 }
