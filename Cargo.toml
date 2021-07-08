@@ -1,6 +1,6 @@
 [package]
 name = "asterisk-ari-client-rs"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["abezecny"]
 edition = "2018"
 
