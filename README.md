@@ -5,7 +5,7 @@
 [![version](https://img.shields.io/crates/v/asterisk-ari-client-rs)](https://crates.io/crates/asterisk-ari-client-rs)
 [![docs](https://docs.rs/asterisk-ari-client-rs/badge.svg)](https://docs.rs/asterisk-ari-client-rs)
 
-TBD
+Simple [Asterisk](https://www.asterisk.org/) library.
 
 ## License
 
