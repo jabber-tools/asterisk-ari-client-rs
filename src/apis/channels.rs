@@ -22,6 +22,9 @@ pub trait ChannelsAPI {
     /// Get the value of a channel variable
     async fn get_variable(&self, channel_id: &str, var_name: &str) -> Result<String>;
 
+    /// Get the value of a channel variable
+    async fn set_variable(&self, channel_id: &str, var_name: &str, var_value: &str) -> Result<()>;
+
     /// Hangs up the channel
     async fn hangup(&self, channel_id: &str) -> Result<()>;
 

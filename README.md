@@ -25,6 +25,7 @@ Apart from that following channels' operations are supported:
 * play
 * stop_play
 * get_variable
+* set_variable
 * hangup
 * continue_in_dialplan
 

@@ -482,6 +482,23 @@ impl ChannelsAPI for AriClient {
         Ok(variable.value)
     }
 
+    async fn set_variable(&self, channel_id: &str, var_name: &str, var_value: &str) -> Result<()> {
+        let resp = HTTP_CLIENT
+            .post(format!(
+                "{}/channels/{}/variable?variable={}&value={}",
+                self.url, channel_id, var_name, var_value
+            ))
+            .headers(self.get_common_headers()?)
+            .send()
+            .await?;
+
+        let status = resp.status();
+        let body_str = resp.text().await?;
+
+        eval_status_code!(status, StatusCode::NO_CONTENT, Some(body_str));
+        Ok(())
+    }
+
     async fn hangup(&self, channel_id: &str) -> Result<()> {
         let resp = HTTP_CLIENT
             .delete(format!("{}/channels/{}", self.url, channel_id))
