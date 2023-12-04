@@ -524,4 +524,30 @@ impl ChannelsAPI for AriClient {
         eval_status_code!(status, StatusCode::NO_CONTENT, Some(body_str));
         Ok(())
     }
+
+    async fn record(&self,channel_id: &str,filepath:Option,audio_format:Option)->Result<()>{
+        filepath=Some(filepath.unwrap_or(channel_id));
+        audio_format=Some(audio_format.unwrap_or("wav"));
+        let req_body = format!(
+            r#"
+            {{
+                "name": "{_filepath_}",
+                "format": "{_audio_format_}"
+            }}
+            "#,
+            _filepath_ = filepath,
+            _audio_format_ = audio_format,
+        );
+        let resp = HTTP_CLIENT
+            .post(format!("{}/channels/{}/record", self.url, channel_id))
+            .headers(self.get_common_headers()?)
+            .body(req_body)
+            .send()
+            .await?;
+
+        let status = resp.status();
+        let body_str = resp.text().await?;
+        eval_status_code!(status, StatusCode::CREATED, Some(body_str));
+        Ok(())
+    }
 }

@@ -30,4 +30,7 @@ pub trait ChannelsAPI {
 
     /// Exit application; continue execution in the dialplan
     async fn continue_in_dialplan(&self, channel_id: &str) -> Result<()>;
+
+    /// Record audio from a channel. default filepath var/spool/asterisk/recording/channel_id.wav
+    async fn record(&self,channel_id: &str,filepath:Option<&str>,audio_format:Option<&str>)->Result<()>;
 }
