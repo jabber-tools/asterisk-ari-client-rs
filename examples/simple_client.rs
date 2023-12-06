@@ -23,6 +23,8 @@ fn stasis_start(event: StasisStart) {
         debug!("Answering channel {} now!", &event.channel.id);
         ARICLIENT.answer(&event.channel.id).await.unwrap();
         debug!("Channel {} answered!", &event.channel.id);
+        ARICLIENT.record(&event.channel.id, None, None).await.unwrap();
+        debug!("Channel {} recording started!", &event.channel.id);
     });
 }
 

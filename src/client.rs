@@ -525,9 +525,7 @@ impl ChannelsAPI for AriClient {
         Ok(())
     }
 
-    async fn record(&self,channel_id: &str,filepath:Option,audio_format:Option)->Result<()>{
-        filepath=Some(filepath.unwrap_or(channel_id));
-        audio_format=Some(audio_format.unwrap_or("wav"));
+    async fn record(&self,channel_id: &str,filepath:Option<&str>,audio_format:Option<&str>)->Result<()>{
         let req_body = format!(
             r#"
             {{
@@ -535,8 +533,8 @@ impl ChannelsAPI for AriClient {
                 "format": "{_audio_format_}"
             }}
             "#,
-            _filepath_ = filepath,
-            _audio_format_ = audio_format,
+            _filepath_ = filepath.unwrap_or(channel_id),
+            _audio_format_ = audio_format.unwrap_or("wav"),
         );
         let resp = HTTP_CLIENT
             .post(format!("{}/channels/{}/record", self.url, channel_id))
