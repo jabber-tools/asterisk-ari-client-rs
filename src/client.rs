@@ -525,16 +525,36 @@ impl ChannelsAPI for AriClient {
         Ok(())
     }
 
-    async fn record(&self,channel_id: &str,filepath:Option<&str>,audio_format:Option<&str>)->Result<()>{
+    async fn record(
+        &self,
+        channel_id: &str,
+        filepath:Option<&str>,
+        audio_format:Option<&str>,
+        terminate_on:Option<&str>,
+        max_duration:Option<usize>,
+        max_silence:Option<usize>,
+        if_exists:Option<&str>,
+        beep:Option<bool>,
+    )->Result<()>{
         let req_body = format!(
             r#"
             {{
                 "name": "{_filepath_}",
-                "format": "{_audio_format_}"
+                "format": "{_audio_format_}",
+                "terminateOn": "{_terminate_on_}",
+                "maxDuration": {_max_duration_},
+                "maxSilence": {_max_silence_},
+                "ifExists": "{_if_exists_}",
+                "beep": {_beep_}
             }}
             "#,
             _filepath_ = filepath.unwrap_or(channel_id),
             _audio_format_ = audio_format.unwrap_or("wav"),
+            _terminate_on_= terminate_on.unwrap_or("none"),
+            _max_duration_ = max_duration.unwrap_or(0),
+            _max_silence_ = max_silence.unwrap_or(0),
+            _if_exists_ = if_exists.unwrap_or("fail"),
+            _beep_=beep.unwrap_or(false),
         );
         let resp = HTTP_CLIENT
             .post(format!("{}/channels/{}/record", self.url, channel_id))
