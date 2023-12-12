@@ -22,6 +22,11 @@ fn stasis_start(event: StasisStart) {
         info!("stasis_start: {:#?}", event);
         debug!("Answering channel {} now!", &event.channel.id);
         ARICLIENT.answer(&event.channel.id).await.unwrap();
+        // do the recording
+        ARICLIENT
+            .record(&event.channel.id, None, None, None, None, None, None, None)
+            .await
+            .unwrap();
         debug!("Channel {} answered!", &event.channel.id);
     });
 }
@@ -120,10 +125,7 @@ async fn main() -> Result<()> {
     client.set_channel_var_set_sender(Some(tx_channel_var_set));
 
     tokio::spawn(async move {
-        if let Err(some_error) = client
-            .ari_processing_loop(vec!["my-ast-app".into()])
-            .await
-        {
+        if let Err(some_error) = client.ari_processing_loop(vec!["my-ast-app".into()]).await {
             error!("Error in ari_processing_loop {:?}", some_error);
         }
     });

@@ -28,6 +28,7 @@ Apart from that following channels' operations are supported:
 * set_variable
 * hangup
 * continue_in_dialplan
+* record
 
 This is by no means ready library. It is used for now on single purpose project and needs to be extended to support other ARI APIs. Pull requests welcome!
 

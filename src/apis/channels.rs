@@ -25,9 +25,22 @@ pub trait ChannelsAPI {
     /// Set the value of a channel variable
     async fn set_variable(&self, channel_id: &str, var_name: &str, var_value: &str) -> Result<()>;
 
-    /// Hangs up the channel
+    /// Hang up the channel
     async fn hangup(&self, channel_id: &str) -> Result<()>;
 
     /// Exit application; continue execution in the dialplan
     async fn continue_in_dialplan(&self, channel_id: &str) -> Result<()>;
+
+    /// Record audio from a channel. Default filepath: /var/spool/asterisk/recording/channel_id.wav
+    async fn record(
+        &self,
+        channel_id: &str,
+        filepath: Option<&str>,
+        audio_format: Option<&str>,
+        terminate_on: Option<&str>,
+        max_duration: Option<usize>,
+        max_silence: Option<usize>,
+        if_exists: Option<&str>,
+        beep: Option<bool>,
+    ) -> Result<()>;
 }
