@@ -12,8 +12,8 @@ use tokio::{self, sync::mpsc};
 lazy_static! {
     pub static ref ARICLIENT: AriClient = AriClient::new(
         "http://localhost:8088/ari".to_owned(),
-        "<<user>>".into(),
-        "<<password>>".into(),
+        "asterisk".into(),
+        "asterisk".into(),
     );
 }
 
@@ -71,15 +71,15 @@ async fn main() -> Result<()> {
     env_logger::init();
     let mut client = AriClient::new(
         "http://localhost:8088/ari".into(),
-        "<<user>>".into(),
-        "<<password>>".into(),
+        "asterisk".into(),
+        "asterisk".into(),
     );
     let resp = client.list().await?;
     debug!("asterisk registered apps: {:#?}", resp);
 
-    // no when we connected our app we can list it
-    let resp2 = client.get("<<asterisk-app-name>>").await?;
-    debug!("my app is {:#?}", resp2);
+    // we could potentially retrieve application details like this:
+    // let resp2 = client.get("my-ast-app").await?;
+    // debug!("my app is {:#?}", resp2);
 
     let (tx_stasis_start, mut rx_stasis_start) = mpsc::channel::<StasisStart>(1000);
     client.set_stasis_start_sender(Some(tx_stasis_start));
@@ -121,7 +121,7 @@ async fn main() -> Result<()> {
 
     tokio::spawn(async move {
         if let Err(some_error) = client
-            .ari_processing_loop(vec!["<<asterisk-app-name>>".into()])
+            .ari_processing_loop(vec!["my-ast-app".into()])
             .await
         {
             error!("Error in ari_processing_loop {:?}", some_error);
@@ -198,7 +198,7 @@ async fn main() -> Result<()> {
         }
     });
 
-    sleep(Duration::from_millis(10000)).await;
+    sleep(Duration::from_millis(100000)).await;
 
     Ok(())
 }
