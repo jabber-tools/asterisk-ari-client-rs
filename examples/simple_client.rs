@@ -1,5 +1,6 @@
 use asterisk_ari_client_rs::apis::applications::ApplicationsAPI;
 use asterisk_ari_client_rs::apis::channels::ChannelsAPI;
+use asterisk_ari_client_rs::apis::recordings::RecordingsAPI;
 use asterisk_ari_client_rs::models::events::*;
 use asterisk_ari_client_rs::{client::AriClient, errors::Result};
 use env_logger;
@@ -27,6 +28,21 @@ fn stasis_start(event: StasisStart) {
             .record(&event.channel.id, None, None, None, None, None, None, None)
             .await
             .unwrap();
+        // pause recording after 5 secs
+        sleep(Duration::from_millis(5000)).await;
+        if let Err(e) = ARICLIENT.pause_recording(&event.channel.id).await {
+            error!("Error pausing recording: {:?}", e);
+        }
+        else{
+            // unpause recording after next 2 secs
+            sleep(Duration::from_millis(2000)).await;
+            ARICLIENT.unpause_recording(&event.channel.id).await.unwrap();
+        }
+        // stop recording after 5 secs
+        sleep(Duration::from_millis(5000)).await;
+        if let Err(e)= ARICLIENT.stop_recording(&event.channel.id).await {
+            error!("Error stopping recording: {:?}", e);
+        }
         debug!("Channel {} answered!", &event.channel.id);
     });
 }
