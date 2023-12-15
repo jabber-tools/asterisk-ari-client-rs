@@ -6,15 +6,14 @@ use crate::models::events::*;
 use crate::models::playbacks::Playback;
 use async_trait::async_trait;
 use futures_util::SinkExt;
-use http::StatusCode;
 use lazy_static::lazy_static;
 use log::*;
 use rand::Rng;
+use reqwest::StatusCode;
 use reqwest::{
     self,
     header::{HeaderMap, HeaderValue},
 };
-use std::boxed::Box;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{interval, Duration};
 use tokio_tungstenite::{connect_async, tungstenite::Message as WSMessage};
@@ -315,6 +314,7 @@ impl AriClient {
         Ok(())
     }
 
+    #[allow(deprecated)]
     fn get_auth_header(&self) -> String {
         format!(
             "Basic {}",
