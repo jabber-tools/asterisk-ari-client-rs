@@ -32,6 +32,7 @@ pub trait ChannelsAPI {
     async fn continue_in_dialplan(&self, channel_id: &str) -> Result<()>;
 
     /// Record audio from a channel. Default filepath: /var/spool/asterisk/recording/channel_id.wav
+    #[allow(clippy::too_many_arguments)]
     async fn record(
         &self,
         channel_id: &str,

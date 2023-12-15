@@ -1,6 +1,6 @@
-use http::StatusCode;
 use reqwest::header::InvalidHeaderValue;
 use reqwest::Error as ReqwError;
+use reqwest::StatusCode;
 use std::result;
 use tokio_tungstenite::tungstenite::Error as WSError;
 use url::ParseError;
