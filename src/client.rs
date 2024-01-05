@@ -1,4 +1,6 @@
-use crate::apis::{applications::ApplicationsAPI, channels::ChannelsAPI};
+use crate::apis::{
+    applications::ApplicationsAPI, channels::ChannelsAPI, recordings::RecordingsAPI,
+};
 use crate::errors::{Error, Result};
 use crate::models::applications::Application;
 use crate::models::channels::Variable;
@@ -566,6 +568,97 @@ impl ChannelsAPI for AriClient {
         let status = resp.status();
         let body_str = resp.text().await?;
         eval_status_code!(status, StatusCode::CREATED, Some(body_str));
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl RecordingsAPI for AriClient {
+    async fn stop_recording(&self, recording_name: &str) -> Result<()> {
+        let resp = HTTP_CLIENT
+            .post(format!(
+                "{}/recordings/live/{}/stop",
+                self.url, recording_name
+            ))
+            .headers(self.get_common_headers()?)
+            .send()
+            .await?;
+
+        let status = resp.status();
+        let body_str = resp.text().await?;
+        eval_status_code!(status, StatusCode::NO_CONTENT, Some(body_str));
+        Ok(())
+    }
+
+    async fn pause_recording(&self, recording_name: &str) -> Result<()> {
+        let resp = HTTP_CLIENT
+            .post(format!(
+                "{}/recordings/live/{}/pause",
+                self.url, recording_name
+            ))
+            .headers(self.get_common_headers()?)
+            .send()
+            .await?;
+
+        let status = resp.status();
+        eval_status_code!(status, StatusCode::NO_CONTENT, None);
+        Ok(())
+    }
+
+    async fn unpause_recording(&self, recording_name: &str) -> Result<()> {
+        let resp = HTTP_CLIENT
+            .delete(format!(
+                "{}/recordings/live/{}/pause",
+                self.url, recording_name
+            ))
+            .headers(self.get_common_headers()?)
+            .send()
+            .await?;
+
+        let status = resp.status();
+        eval_status_code!(status, StatusCode::NO_CONTENT, None);
+        Ok(())
+    }
+
+    async fn mute_recording(&self, recording_name: &str) -> Result<()> {
+        let resp = HTTP_CLIENT
+            .post(format!(
+                "{}/recordings/live/{}/mute",
+                self.url, recording_name
+            ))
+            .headers(self.get_common_headers()?)
+            .send()
+            .await?;
+
+        let status = resp.status();
+        eval_status_code!(status, StatusCode::NO_CONTENT, None);
+        Ok(())
+    }
+
+    async fn unmute_recording(&self, recording_name: &str) -> Result<()> {
+        let resp = HTTP_CLIENT
+            .delete(format!(
+                "{}/recordings/live/{}/mute",
+                self.url, recording_name
+            ))
+            .headers(self.get_common_headers()?)
+            .send()
+            .await?;
+
+        let status = resp.status();
+        eval_status_code!(status, StatusCode::NO_CONTENT, None);
+        Ok(())
+    }
+
+    async fn delete_recording(&self, recording_name: &str) -> Result<()> {
+        let resp = HTTP_CLIENT
+            .delete(format!("{}/recordings/live/{}", self.url, recording_name))
+            .headers(self.get_common_headers()?)
+            .send()
+            .await?;
+
+        let status = resp.status();
+        eval_status_code!(status, StatusCode::NO_CONTENT, None);
         Ok(())
     }
 }

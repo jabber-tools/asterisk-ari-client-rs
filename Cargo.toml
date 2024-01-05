@@ -1,6 +1,6 @@
 [package]
 name = "asterisk-ari-client-rs"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["abezecny"]
 edition = "2018"
 description = "Simple Asterisk ARI library"
@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 keywords = ["telephony", "asterisk"]
 categories = ["multimedia", "multimedia::audio"]
 repository = "https://github.com/jabber-tools/asterisk-ari-client-rs"
-documentation = "https://docs.rs/jabber-tools/0.1.3"
+documentation = "https://docs.rs/jabber-tools/0.1.4"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

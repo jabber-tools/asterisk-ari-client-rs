@@ -30,6 +30,23 @@ Apart from that following channels' operations are supported:
 * continue_in_dialplan
 * record
 
+Supported recording API operations:
+
+* stop_recording
+* pause_recording
+* unpause_recording
+* mute_recording
+* unmute_recording
+* delete_recording
+
+Supported application API operations:
+
+* filter
+* get
+* list
+* subscribe
+* unsubscribe
+
 This is by no means ready library. It is used for now on single purpose project and needs to be extended to support other ARI APIs. Pull requests welcome!
 
 ## License

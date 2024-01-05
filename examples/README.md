@@ -20,10 +20,16 @@ In your soft phone (e.g. Zoiper5 or MicroSIP) configure user **6001@localhost:50
 For additional info about ARI see [here](https://docs.asterisk.org/Configuration/Interfaces/Asterisk-REST-Interface-ARI/Getting-Started-with-ARI).
 
 
-Once your asterisk is up & running you can run example:
+Once your asterisk is up & running you can run full example:
 
 ```
 cargo run --example simple_client
+```
+
+or specific examples (currently recording control example):
+
+```
+cargo run --example recording
 ```
 
 To connect to ARI websocket directly without simple_client above you can also use **wscat**, details [here](https://docs.asterisk.org/Configuration/Interfaces/Asterisk-REST-Interface-ARI/Getting-Started-with-ARI/#configuring-asterisk).
