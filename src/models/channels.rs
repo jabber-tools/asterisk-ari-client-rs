@@ -1,3 +1,5 @@
+use core::fmt;
+
 use serde::{Deserialize, Serialize};
 // https://serde.rs/custom-date-format.html
 #[cfg(feature = "parse-event-datetimes")]
@@ -202,4 +204,24 @@ pub struct RtPstat {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Variable {
     pub value: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+pub enum Direction {
+    #[default]
+    None,
+    Both,
+    Out,
+    In
+}
+impl fmt::Display for Direction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let str = match self {
+            Direction::None => "none",
+            Direction::Both => "both",
+            Direction::Out => "out",
+            Direction::In => "in"
+        };
+        write!(f, "{}", str)
+    }
 }

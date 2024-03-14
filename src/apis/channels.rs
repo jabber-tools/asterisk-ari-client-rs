@@ -1,4 +1,5 @@
 use crate::errors::Result;
+use crate::models::channels::{Channel, Direction};
 use crate::models::playbacks::Playback;
 use async_trait::async_trait;
 
@@ -30,6 +31,15 @@ pub trait ChannelsAPI {
 
     /// Exit application; continue execution in the dialplan
     async fn continue_in_dialplan(&self, channel_id: &str) -> Result<()>;
+
+    /// Create a new channel to snoop (spy/whisper) on a specific channel
+    async fn snoop(
+        &self,
+        channel_id: &str,
+        app: &str,
+        spy: Option<Direction>,
+        whisper: Option<Direction>
+    ) -> Result<Channel>;
 
     /// Record audio from a channel. Default filepath: /var/spool/asterisk/recording/channel_id.wav
     #[allow(clippy::too_many_arguments)]
