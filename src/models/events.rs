@@ -2,6 +2,7 @@ use super::playbacks::Playback;
 #[cfg(feature = "parse-event-datetimes")]
 use crate::models::channels::ari_date_format;
 use crate::models::channels::Channel;
+use crate::models::recordings::Recording;
 #[cfg(feature = "parse-event-datetimes")]
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -308,6 +309,49 @@ pub struct ChannelVarset {
     pub value: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct RecordingStarted {
+    /// The unique ID for the Asterisk instance that raised this event.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub asterisk_id: Option<String>,
+
+    /// Name of the application receiving the event.
+    pub application: String,
+
+    /// Time at which this event was created. E.g. 2020-11-22T20:12:51.214+0000
+    #[cfg(feature = "parse-event-datetimes")]
+    #[serde(with = "ari_date_format")]
+    pub timestamp: DateTime<Utc>,
+
+    #[cfg(not(feature = "parse-event-datetimes"))]
+    pub timestamp: String,
+
+    /// Recording.
+    pub recording: Recording,
+
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct RecordingFinished {
+    /// The unique ID for the Asterisk instance that raised this event.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub asterisk_id: Option<String>,
+
+    /// Name of the application receiving the event.
+    pub application: String,
+
+    /// Time at which this event was created. E.g. 2020-11-22T20:12:51.214+0000
+    #[cfg(feature = "parse-event-datetimes")]
+    #[serde(with = "ari_date_format")]
+    pub timestamp: DateTime<Utc>,
+
+    #[cfg(not(feature = "parse-event-datetimes"))]
+    pub timestamp: String,
+
+    /// Recording.
+    pub recording: Recording,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum AriEvent {
@@ -322,6 +366,8 @@ pub enum AriEvent {
     PlaybackFinished(PlaybackFinished),
     ChannelStateChange(ChannelStateChange),
     ChannelVarset(ChannelVarset),
+    RecordingStarted(RecordingStarted),
+    RecordingFinished(RecordingFinished),
 }
 
 #[cfg(test)]
