@@ -10,6 +10,7 @@ use async_trait::async_trait;
 use futures_util::SinkExt;
 use lazy_static::lazy_static;
 use log::*;
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use rand::Rng;
 use reqwest::StatusCode;
 use reqwest::{
@@ -649,6 +650,7 @@ impl ChannelsAPI for AriClient {
 #[async_trait]
 impl RecordingsAPI for AriClient {
     async fn get_recording(&self, recording_name: &str) -> Result<Vec<u8>> {
+        let recording_name = utf8_percent_encode(recording_name, NON_ALPHANUMERIC);
         let resp = HTTP_CLIENT
             .get(format!(
                 "{}/recordings/stored/{}/file",
@@ -658,10 +660,10 @@ impl RecordingsAPI for AriClient {
             .send()
             .await?;
         let status = resp.status();
-        let body_str = resp.text().await?;
+        let body_bytes = resp.bytes().await?;
 
-        eval_status_code!(status, StatusCode::OK, Some(body_str));
-        Ok(body_str.into_bytes())
+        eval_status_code!(status, StatusCode::OK, Some(format!("{body_bytes:#?}")));
+        Ok(body_bytes.to_vec())
 
     }
     async fn stop_recording(&self, recording_name: &str) -> Result<()> {

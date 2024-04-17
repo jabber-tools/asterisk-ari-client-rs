@@ -52,6 +52,7 @@ dependencies = [
  "futures-util",
  "lazy_static",
  "log",
+ "percent-encoding",
  "rand",
  "reqwest",
  "serde",
