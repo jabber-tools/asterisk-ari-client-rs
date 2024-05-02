@@ -71,14 +71,6 @@ fn channel_var_set(event: ChannelVarset) {
     info!("channel_var_set: {:#?}", event);
 }
 
-fn recording_started(event: RecordingStarted) {
-    info!("recording_started: {:#?}", event);
-}
-
-fn recording_finished(event: RecordingFinished) {
-    info!("recording_finished: {:#?}", event);
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
@@ -131,12 +123,6 @@ async fn main() -> Result<()> {
 
     let (tx_channel_var_set, mut rx_channel_var_set) = mpsc::channel::<ChannelVarset>(1000);
     client.set_channel_var_set_sender(Some(tx_channel_var_set));
-
-    let (tx_recording_started, mut rx_recording_started) = mpsc::channel::<RecordingStarted>(1000);
-    client.set_recording_started_sender(Some(tx_recording_started));
-
-    let (tx_recording_finished, mut rx_recording_finished) = mpsc::channel::<RecordingFinished>(1000);
-    client.set_recording_finished_sender(Some(tx_recording_finished));
 
     tokio::spawn(async move {
         if let Err(some_error) = client.ari_processing_loop(vec!["my-ast-app".into()]).await {

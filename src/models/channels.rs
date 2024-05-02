@@ -212,7 +212,7 @@ pub enum Direction {
     None,
     Both,
     Out,
-    In
+    In,
 }
 impl fmt::Display for Direction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -220,7 +220,7 @@ impl fmt::Display for Direction {
             Direction::None => "none",
             Direction::Both => "both",
             Direction::Out => "out",
-            Direction::In => "in"
+            Direction::In => "in",
         };
         write!(f, "{}", str)
     }

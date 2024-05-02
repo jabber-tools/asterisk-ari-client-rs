@@ -45,6 +45,14 @@ async fn stasis_start(event: StasisStart) {
     ARICLIENT.stop_recording(&event.channel.id).await.unwrap();
 }
 
+fn recording_started(event: RecordingStarted) {
+    info!("recording_started: {:#?}", event);
+}
+
+fn recording_finished(event: RecordingFinished) {
+    info!("recording_finished: {:#?}", event);
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
@@ -57,6 +65,13 @@ async fn main() -> Result<()> {
     let (tx_stasis_start, mut rx_stasis_start) = mpsc::channel::<StasisStart>(1000);
     client.set_stasis_start_sender(Some(tx_stasis_start));
 
+    let (tx_recording_started, mut rx_recording_started) = mpsc::channel::<RecordingStarted>(1000);
+    client.set_recording_started_sender(Some(tx_recording_started));
+
+    let (tx_recording_finished, mut rx_recording_finished) =
+        mpsc::channel::<RecordingFinished>(1000);
+    client.set_recording_finished_sender(Some(tx_recording_finished));
+
     tokio::spawn(async move {
         if let Err(some_error) = client.ari_processing_loop(vec!["my-ast-app".into()]).await {
             error!("Error in ari_processing_loop {:?}", some_error);
@@ -66,6 +81,30 @@ async fn main() -> Result<()> {
     if let Some(event) = rx_stasis_start.recv().await {
         stasis_start(event).await;
     }
+
+    tokio::spawn(async move {
+        loop {
+            tokio::select! {
+                event_opt = rx_stasis_start.recv() => {
+                    if let Some(event) = event_opt {
+                        stasis_start(event);
+                    }
+                }
+
+                event_opt = rx_recording_started.recv() => {
+                  if let Some(event) = event_opt {
+                    recording_started(event);
+                  }
+                }
+
+                event_opt = rx_recording_finished.recv() => {
+                  if let Some(event) = event_opt {
+                    recording_finished(event);
+                  }
+                }
+            }
+        }
+    });
 
     sleep(Duration::from_millis(30000)).await;
 

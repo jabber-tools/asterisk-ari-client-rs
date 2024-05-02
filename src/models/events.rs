@@ -328,7 +328,6 @@ pub struct RecordingStarted {
 
     /// Recording.
     pub recording: Recording,
-
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

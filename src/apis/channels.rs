@@ -38,7 +38,7 @@ pub trait ChannelsAPI {
         channel_id: &str,
         app: &str,
         spy: Option<Direction>,
-        whisper: Option<Direction>
+        whisper: Option<Direction>,
     ) -> Result<Channel>;
 
     /// Record audio from a channel. Default filepath: /var/spool/asterisk/recording/channel_id.wav

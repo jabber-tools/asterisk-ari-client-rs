@@ -559,7 +559,7 @@ impl ChannelsAPI for AriClient {
         channel_id: &str,
         app: &str,
         spy: Option<Direction>,
-        whisper: Option<Direction>
+        whisper: Option<Direction>,
     ) -> Result<Channel> {
         let req_body = format!(
             r#"
@@ -581,9 +581,8 @@ impl ChannelsAPI for AriClient {
         trace!("req: {req:#?}");
         trace!("req body: {}", req_body);
         trace!("url: {:#?}", self.url);
-            
-        let resp = req.send()
-            .await?;
+
+        let resp = req.send().await?;
 
         trace!("response: {:#?}", resp);
 
@@ -593,12 +592,10 @@ impl ChannelsAPI for AriClient {
         let body_str = resp.text().await?;
         trace!("text: {:#?}", body_str);
 
-
         eval_status_code!(status, StatusCode::OK, Some(body_str));
-        
+
         let res_chan = serde_json::from_str(&body_str)?;
         Ok(res_chan)
-
     }
 
     async fn record(
@@ -644,7 +641,6 @@ impl ChannelsAPI for AriClient {
         eval_status_code!(status, StatusCode::CREATED, Some(body_str));
         Ok(())
     }
-
 }
 
 #[async_trait]
@@ -664,7 +660,6 @@ impl RecordingsAPI for AriClient {
 
         eval_status_code!(status, StatusCode::OK, Some(format!("{body_bytes:#?}")));
         Ok(body_bytes.to_vec())
-
     }
     async fn stop_recording(&self, recording_name: &str) -> Result<()> {
         let resp = HTTP_CLIENT
