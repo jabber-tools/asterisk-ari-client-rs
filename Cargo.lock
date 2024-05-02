@@ -43,7 +43,7 @@ dependencies = [
 
 [[package]]
 name = "asterisk-ari-client-rs"
-version = "0.1.4"
+version = "0.1.3"
 dependencies = [
  "async-trait",
  "base64",
@@ -52,6 +52,7 @@ dependencies = [
  "futures-util",
  "lazy_static",
  "log",
+ "percent-encoding",
  "rand",
  "reqwest",
  "serde",

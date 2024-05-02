@@ -18,6 +18,8 @@ Simple [Asterisk](https://www.asterisk.org/) library. Implements only small frac
 * playback_finished
 * channel_state_change
 * channel_var_set
+* recording_started
+* recording_finished
   
 Apart from that following channels' operations are supported:
 
@@ -29,6 +31,7 @@ Apart from that following channels' operations are supported:
 * hangup
 * continue_in_dialplan
 * record
+* snoop
 
 Supported recording API operations:
 
@@ -38,6 +41,7 @@ Supported recording API operations:
 * mute_recording
 * unmute_recording
 * delete_recording
+* get_recording
 
 Supported application API operations:
 

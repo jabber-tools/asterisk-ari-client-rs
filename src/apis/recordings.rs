@@ -7,6 +7,9 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait RecordingsAPI {
+    /// Fetch a live recording file over the ari.
+    async fn get_recording(&self, recording_name: &str) -> Result<Vec<u8>>;
+
     /// Stop a live recording and store it.
     async fn stop_recording(&self, recording_name: &str) -> Result<()>;
 

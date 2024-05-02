@@ -3,13 +3,14 @@ use crate::apis::{
 };
 use crate::errors::{Error, Result};
 use crate::models::applications::Application;
-use crate::models::channels::Variable;
+use crate::models::channels::{Channel, Direction, Variable};
 use crate::models::events::*;
 use crate::models::playbacks::Playback;
 use async_trait::async_trait;
 use futures_util::SinkExt;
 use lazy_static::lazy_static;
 use log::*;
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use rand::Rng;
 use reqwest::StatusCode;
 use reqwest::{
@@ -46,6 +47,8 @@ pub struct AriClient {
     playback_finished_sender: Option<Sender<PlaybackFinished>>,
     channel_state_change_sender: Option<Sender<ChannelStateChange>>,
     channel_var_set_sender: Option<Sender<ChannelVarset>>,
+    recording_started_sender: Option<Sender<RecordingStarted>>,
+    recording_finished_sender: Option<Sender<RecordingFinished>>,
 }
 
 impl AriClient {
@@ -65,6 +68,8 @@ impl AriClient {
             playback_finished_sender: None,
             channel_state_change_sender: None,
             channel_var_set_sender: None,
+            recording_started_sender: None,
+            recording_finished_sender: None,
         }
     }
 
@@ -122,6 +127,14 @@ impl AriClient {
 
     pub fn set_channel_var_set_sender(&mut self, sender: Option<Sender<ChannelVarset>>) {
         self.channel_var_set_sender = sender;
+    }
+
+    pub fn set_recording_started_sender(&mut self, sender: Option<Sender<RecordingStarted>>) {
+        self.recording_started_sender = sender;
+    }
+
+    pub fn set_recording_finished_sender(&mut self, sender: Option<Sender<RecordingFinished>>) {
+        self.recording_finished_sender = sender;
     }
 
     /// connect to ARI signal stream websocket
@@ -286,6 +299,20 @@ impl AriClient {
                                                     if let Some(sender) = &self.channel_var_set_sender {
                                                         if let Err(send_err) = sender.send(event.clone()).await {
                                                             error!("ari_processing_loop ChannelVarset sending error {:?}: ", send_err);
+                                                        }
+                                                    }
+                                                }
+                                                AriEvent::RecordingStarted(event) => {
+                                                    if let Some(sender) = &self.recording_started_sender {
+                                                        if let Err(send_err) = sender.send(event.clone()).await {
+                                                            error!("ari_processing_loop RecordingStarted sending error {:?}: ", send_err);
+                                                        }
+                                                    }
+                                                }
+                                                AriEvent::RecordingFinished(event) => {
+                                                    if let Some(sender) = &self.recording_finished_sender {
+                                                        if let Err(send_err) = sender.send(event.clone()).await {
+                                                            error!("ari_processing_loop RecordingFinished sending error {:?}: ", send_err);
                                                         }
                                                     }
                                                 }
@@ -527,6 +554,53 @@ impl ChannelsAPI for AriClient {
         Ok(())
     }
 
+    async fn snoop(
+        &self,
+        channel_id: &str,
+        app: &str,
+        spy: Option<Direction>,
+        whisper: Option<Direction>
+    ) -> Result<Channel> {
+        let req_body = format!(
+            r#"
+            {{
+                "app": "{_app_name_}",
+                "spy": "{_spy_}",
+                "whisper": "{_whisper_}"
+            }}
+            "#,
+            _app_name_ = app,
+            _spy_ = spy.unwrap_or_default(),
+            _whisper_ = whisper.unwrap_or_default()
+        );
+
+        let req = HTTP_CLIENT
+            .post(format!("{}/channels/{}/snoop", self.url, channel_id))
+            .headers(self.get_common_headers()?)
+            .body(req_body.clone());
+        trace!("req: {req:#?}");
+        trace!("req body: {}", req_body);
+        trace!("url: {:#?}", self.url);
+            
+        let resp = req.send()
+            .await?;
+
+        trace!("response: {:#?}", resp);
+
+        let status = resp.status();
+        trace!("status: {:#?}", status);
+
+        let body_str = resp.text().await?;
+        trace!("text: {:#?}", body_str);
+
+
+        eval_status_code!(status, StatusCode::OK, Some(body_str));
+        
+        let res_chan = serde_json::from_str(&body_str)?;
+        Ok(res_chan)
+
+    }
+
     async fn record(
         &self,
         channel_id: &str,
@@ -570,10 +644,28 @@ impl ChannelsAPI for AriClient {
         eval_status_code!(status, StatusCode::CREATED, Some(body_str));
         Ok(())
     }
+
 }
 
 #[async_trait]
 impl RecordingsAPI for AriClient {
+    async fn get_recording(&self, recording_name: &str) -> Result<Vec<u8>> {
+        let recording_name = utf8_percent_encode(recording_name, NON_ALPHANUMERIC);
+        let resp = HTTP_CLIENT
+            .get(format!(
+                "{}/recordings/stored/{}/file",
+                self.url, recording_name
+            ))
+            .headers(self.get_common_headers()?)
+            .send()
+            .await?;
+        let status = resp.status();
+        let body_bytes = resp.bytes().await?;
+
+        eval_status_code!(status, StatusCode::OK, Some(format!("{body_bytes:#?}")));
+        Ok(body_bytes.to_vec())
+
+    }
     async fn stop_recording(&self, recording_name: &str) -> Result<()> {
         let resp = HTTP_CLIENT
             .post(format!(
