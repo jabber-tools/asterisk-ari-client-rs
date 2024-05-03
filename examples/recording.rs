@@ -5,6 +5,8 @@ use asterisk_ari_client_rs::{client::AriClient, errors::Result};
 use env_logger;
 use lazy_static::lazy_static;
 use log::*;
+use std::fs;
+use std::io::Write;
 use std::time::Duration;
 use tokio::time::sleep;
 use tokio::{self, sync::mpsc};
@@ -17,32 +19,34 @@ lazy_static! {
     );
 }
 
-async fn stasis_start(event: StasisStart) {
+fn stasis_start(event: StasisStart) {
     info!("stasis_start: {:#?}", event);
-    debug!("Answering channel {} now!", &event.channel.id);
-    ARICLIENT.answer(&event.channel.id).await.unwrap();
-    debug!("Channel {} answered!", &event.channel.id);
+    tokio::spawn(async move {
+        debug!("Answering channel {} now!", &event.channel.id);
+        ARICLIENT.answer(&event.channel.id).await.unwrap();
+        debug!("Channel {} answered!", &event.channel.id);
 
-    // start the recording
-    ARICLIENT
-        .record(&event.channel.id, None, None, None, None, None, None, None)
-        .await
-        .unwrap();
+        // start the recording
+        ARICLIENT
+            .record(&event.channel.id, None, None, None, None, None, None, None)
+            .await
+            .unwrap();
 
-    // pause recording after 2 secs
-    sleep(Duration::from_millis(2000)).await;
-    ARICLIENT.pause_recording(&event.channel.id).await.unwrap();
+        // pause recording after 2 secs
+        sleep(Duration::from_millis(2000)).await;
+        ARICLIENT.pause_recording(&event.channel.id).await.unwrap();
 
-    // unpause recording after additional 2 secs
-    sleep(Duration::from_millis(2000)).await;
-    ARICLIENT
-        .unpause_recording(&event.channel.id)
-        .await
-        .unwrap();
+        // unpause recording after additional 2 secs
+        sleep(Duration::from_millis(2000)).await;
+        ARICLIENT
+            .unpause_recording(&event.channel.id)
+            .await
+            .unwrap();
 
-    // stop recording after 2 secs
-    sleep(Duration::from_millis(2000)).await;
-    ARICLIENT.stop_recording(&event.channel.id).await.unwrap();
+        // stop recording after 2 secs
+        sleep(Duration::from_millis(2000)).await;
+        ARICLIENT.stop_recording(&event.channel.id).await.unwrap();
+    });
 }
 
 fn recording_started(event: RecordingStarted) {
@@ -51,6 +55,24 @@ fn recording_started(event: RecordingStarted) {
 
 fn recording_finished(event: RecordingFinished) {
     info!("recording_finished: {:#?}", event);
+
+    tokio::spawn(async move {
+        let recording_bytes = ARICLIENT
+            .get_recording(&event.recording.name)
+            .await
+            .unwrap();
+
+        let mut file = fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(format!(
+                "/tmp/{}.{}",
+                event.recording.name, event.recording.format
+            ))
+            .unwrap();
+
+        file.write_all(&recording_bytes).unwrap();
+    });
 }
 
 #[tokio::main]
@@ -77,10 +99,6 @@ async fn main() -> Result<()> {
             error!("Error in ari_processing_loop {:?}", some_error);
         }
     });
-
-    if let Some(event) = rx_stasis_start.recv().await {
-        stasis_start(event).await;
-    }
 
     tokio::spawn(async move {
         loop {

@@ -196,18 +196,6 @@ async fn main() -> Result<()> {
                     channel_var_set(event);
                   }
                 }
-
-                event_opt = rx_recording_started.recv() => {
-                  if let Some(event) = event_opt {
-                    recording_started(event);
-                  }
-                }
-
-                event_opt = rx_recording_finished.recv() => {
-                  if let Some(event) = event_opt {
-                    recording_finished(event);
-                  }
-                }
             }
         }
     });
